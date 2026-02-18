@@ -2,9 +2,15 @@
 pragma solidity ^0.8.20;
 
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/contracts/access/AccessControl.sol";
 import "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-contract OpenTender is Ownable, ReentrancyGuard {
+contract OpenTender is Ownable, AccessControl, ReentrancyGuard {
+    // --- Roles ---
+    bytes32 public constant CREATOR_ROLE = keccak256("CREATOR_ROLE");
+    bytes32 public constant BIDDER_ROLE = keccak256("BIDDER_ROLE");
+    bytes32 public constant AUDITOR_ROLE = keccak256("AUDITOR_ROLE");
+
     // --- Enums & Structs ---
 
     enum TenderStatus {
@@ -15,11 +21,21 @@ contract OpenTender is Ownable, ReentrancyGuard {
         Canceled
     }
 
+    enum Category {
+        Construction,
+        IT,
+        Logistics,
+        Research,
+        Healthcare,
+        Other
+    }
+
     struct Tender {
         uint256 id;
         address creator;
         string title;
         string description;
+        Category category;
         string ipfsHash; // Stores detailed docs off-chain
         uint256 deadline; // When bidding stops
         uint256 revealDeadline; // When revealing stops
@@ -42,6 +58,16 @@ contract OpenTender is Ownable, ReentrancyGuard {
         uint256 selectedAt;
     }
 
+    struct CompanyProfile {
+        string name;
+        string registrationId;
+        string contactEmail;
+        string ipfsHash; // Logo or docs
+        bool isRegistered;
+        uint256 reputationTotal;
+        uint256 ratingCount;
+    }
+
     // --- State Variables ---
 
     uint256 public tenderCount;
@@ -58,13 +84,21 @@ contract OpenTender is Ownable, ReentrancyGuard {
     // Mapping from Tender ID -> Winner Details
     mapping(uint256 => Winner) public winners;
 
+    // Mapping from Address -> Company Profile
+    mapping(address => CompanyProfile) public companies;
+
+    // Mapping from Tender ID -> bool (true if rated)
+    mapping(uint256 => bool) public tenderRated;
+
     // --- Events ---
 
-    event TenderCreated(uint256 indexed tenderId, address indexed creator, string title);
+    event CompanyRegistered(address indexed company, string name);
+    event TenderCreated(uint256 indexed tenderId, address indexed creator, string title, Category category);
     event BidSubmitted(uint256 indexed tenderId, address indexed bidder);
     event BidRevealed(uint256 indexed tenderId, address indexed bidder, uint256 amount);
     event TenderClosed(uint256 indexed tenderId, address indexed winner, uint256 amount);
     event TenderCanceled(uint256 indexed tenderId);
+    event BidderRated(address indexed bidder, uint256 rating, uint256 newReputationScore);
 
     // --- Modifiers ---
 
@@ -74,28 +108,64 @@ contract OpenTender is Ownable, ReentrancyGuard {
     }
 
     modifier onlyCreator(uint256 _tenderId) {
-        require(tenders[_tenderId].creator == msg.sender || owner() == msg.sender, "Not creator or admin");
+        require(tenders[_tenderId].creator == msg.sender || hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Not creator or admin");
+        _;
+    }
+
+    modifier onlyRegistered() {
+        require(companies[msg.sender].isRegistered, "Company not registered");
         _;
     }
 
     // --- Constructor ---
 
-    constructor() Ownable(msg.sender) {}
+    constructor() Ownable(msg.sender) {
+        // Grant admin and creator roles to deployer
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(CREATOR_ROLE, msg.sender);
+        _grantRole(BIDDER_ROLE, msg.sender);
+    }
 
     // --- Main Functions ---
 
     /**
-     * @dev Create a new tender.
-     * @param _revealDuration Duration (in seconds) after bidding closes for reveal phase.
+     * @dev Register a company profile. Grants BIDDER_ROLE automatically.
+     */
+    function registerCompany(
+        string memory _name,
+        string memory _regId,
+        string memory _email,
+        string memory _ipfsHash
+    ) external {
+        require(!companies[msg.sender].isRegistered, "Already registered");
+        require(bytes(_name).length > 0, "Name required");
+
+        companies[msg.sender] = CompanyProfile({
+            name: _name,
+            registrationId: _regId,
+            contactEmail: _email,
+            ipfsHash: _ipfsHash,
+            isRegistered: true,
+            reputationTotal: 0,
+            ratingCount: 0
+        });
+
+        _grantRole(BIDDER_ROLE, msg.sender);
+        emit CompanyRegistered(msg.sender, _name);
+    }
+
+    /**
+     * @dev Create a new tender. Requires CREATOR_ROLE.
      */
     function createTender(
         string memory _title,
         string memory _description,
+        Category _category,
         string memory _ipfsHash,
         uint256 _biddingDuration,
         uint256 _revealDuration,
         uint256 _minBid
-    ) external returns (uint256) {
+    ) external onlyRole(CREATOR_ROLE) returns (uint256) {
         require(_biddingDuration > 0, "Bidding duration too short");
         require(_revealDuration > 0, "Reveal duration too short");
 
@@ -108,6 +178,7 @@ contract OpenTender is Ownable, ReentrancyGuard {
             creator: msg.sender,
             title: _title,
             description: _description,
+            category: _category,
             ipfsHash: _ipfsHash,
             deadline: biddingDeadline,
             revealDeadline: revealDeadline,
@@ -116,16 +187,14 @@ contract OpenTender is Ownable, ReentrancyGuard {
             createdAt: block.timestamp
         });
 
-        emit TenderCreated(tenderCount, msg.sender, _title);
+        emit TenderCreated(tenderCount, msg.sender, _title, _category);
         return tenderCount;
     }
 
     /**
-     * @dev Submit a "Commitment".
-     * User must calculate `keccak256(abi.encodePacked(amount, secret))` off-chain.
-     * This keeps the bid amount hidden until the reveal phase.
+     * @dev Submit a "Commitment". Requires BIDDER_ROLE (Registered Company).
      */
-    function submitBid(uint256 _tenderId, bytes32 _commitment) external tenderExists(_tenderId) {
+    function submitBid(uint256 _tenderId, bytes32 _commitment) external tenderExists(_tenderId) onlyRole(BIDDER_ROLE) {
         Tender storage tender = tenders[_tenderId];
 
         require(tender.status == TenderStatus.Open, "Tender not open");
@@ -146,7 +215,6 @@ contract OpenTender is Ownable, ReentrancyGuard {
 
     /**
      * @dev Reveal the actual bid amount.
-     * The contract verifies that the amount + secret matches the previously submitted hash.
      */
     function revealBid(uint256 _tenderId, uint256 _amount, string memory _secret) external tenderExists(_tenderId) {
         Tender storage tender = tenders[_tenderId];
@@ -160,7 +228,6 @@ contract OpenTender is Ownable, ReentrancyGuard {
         require(!bid.isRevealed, "Already revealed");
 
         // --- CRYPTOGRAPHIC VERIFICATION ---
-        // We recreate the hash using the input amount and secret
         bytes32 generatedHash = keccak256(abi.encodePacked(_amount, _secret));
 
         require(generatedHash == bid.commitment, "Hash mismatch! Invalid amount/secret");
@@ -174,8 +241,6 @@ contract OpenTender is Ownable, ReentrancyGuard {
 
     /**
      * @dev Close tender and calculate the winner (Lowest Bidder).
-     * Can be called by anyone after reveal deadline to ensure decentralization,
-     * or restricted to admin if preferred.
      */
     function closeTender(uint256 _tenderId) external tenderExists(_tenderId) nonReentrant {
         Tender storage tender = tenders[_tenderId];
@@ -215,6 +280,30 @@ contract OpenTender is Ownable, ReentrancyGuard {
     }
 
     /**
+     * @dev Rate the winning bidder. Only Creator can rate.
+     */
+    function rateBidder(uint256 _tenderId, uint256 _rating) external onlyCreator(_tenderId) {
+        require(!tenderRated[_tenderId], "Already rated");
+        require(tenders[_tenderId].status == TenderStatus.Finalized, "Tender not finalized");
+        require(winners[_tenderId].bidder != address(0), "No winner to rate");
+        require(_rating >= 1 && _rating <= 5, "Rating must be 1-5");
+
+        address winnerAddr = winners[_tenderId].bidder;
+        CompanyProfile storage profile = companies[winnerAddr];
+        
+        // If the winner hasn't registered (e.g. legacy or direct addr), we can't store rating effectively on profile
+        // But since submitBid requires BIDDER_ROLE which requires registration, they should have a profile.
+        // However, we should check just in case.
+        require(profile.isRegistered, "Winner not registered");
+
+        profile.reputationTotal += _rating;
+        profile.ratingCount += 1;
+        tenderRated[_tenderId] = true;
+
+        emit BidderRated(winnerAddr, _rating, profile.reputationTotal / profile.ratingCount);
+    }
+
+    /**
      * @dev Cancel a tender (Only Creator/Admin, before bidding ends).
      */
     function cancelTender(uint256 _tenderId) external onlyCreator(_tenderId) {
@@ -233,10 +322,13 @@ contract OpenTender is Ownable, ReentrancyGuard {
 
     function getBidDetails(uint256 _tenderId, address _bidder) external view returns (bool revealed, uint256 amount) {
         Bid memory bid = bids[_tenderId][_bidder];
-        // Only return amount if it has been revealed
         if (bid.isRevealed) {
             return (true, bid.revealedAmount);
         }
         return (false, 0);
+    }
+    
+    function getCompanyProfile(address _company) external view returns (CompanyProfile memory) {
+        return companies[_company];
     }
 }

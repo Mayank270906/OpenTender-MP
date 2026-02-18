@@ -4,6 +4,8 @@ import Toast from './components/Toast';
 import Home from './pages/Home';
 import CreateTender from './pages/CreateTender';
 import TenderDetail from './pages/TenderDetail';
+import Profile from './pages/Profile';
+import Dashboard from './pages/Dashboard';
 import { WalletProvider, useWallet } from './context/WalletContext';
 import ConnectWallet from './components/ConnectWallet';
 
@@ -25,6 +27,8 @@ function AppContent() {
             <Route path="/" element={<Home />} />
             <Route path="/create" element={<CreateTender />} />
             <Route path="/tender/:id" element={<TenderDetail />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </main>
         <Toast />

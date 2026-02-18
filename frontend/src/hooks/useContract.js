@@ -20,6 +20,7 @@ export async function fetchAllTenders(signerOrProvider) {
             creator: t.creator,
             title: t.title,
             description: t.description,
+            category: Number(t.category),
             ipfsHash: t.ipfsHash,
             deadline: Number(t.deadline),
             revealDeadline: Number(t.revealDeadline),
@@ -44,6 +45,7 @@ export async function fetchTender(signerOrProvider, id) {
         creator: t.creator,
         title: t.title,
         description: t.description,
+        category: Number(t.category),
         ipfsHash: t.ipfsHash,
         deadline: Number(t.deadline),
         revealDeadline: Number(t.revealDeadline),
@@ -54,12 +56,13 @@ export async function fetchTender(signerOrProvider, id) {
     };
 }
 
-export async function createTender(signer, title, description, ipfsHash, biddingDurationSec, revealDurationSec, minBid) {
+export async function createTender(signer, title, description, category, ipfsHash, biddingDurationSec, revealDurationSec, minBid) {
     const contract = getContract(signer);
 
     const tx = await contract.createTender(
         title,
         description,
+        category,
         ipfsHash,
         biddingDurationSec,
         revealDurationSec,
@@ -67,6 +70,34 @@ export async function createTender(signer, title, description, ipfsHash, bidding
     );
     const receipt = await tx.wait();
     return { success: true, hash: tx.hash, receipt };
+}
+
+export async function registerCompany(signer, name, regId, email, ipfsHash) {
+    const contract = getContract(signer);
+    const tx = await contract.registerCompany(name, regId, email, ipfsHash);
+    const receipt = await tx.wait();
+    return { success: true, hash: tx.hash, receipt };
+}
+
+export async function rateBidder(signer, tenderId, rating) {
+    const contract = getContract(signer);
+    const tx = await contract.rateBidder(tenderId, rating);
+    const receipt = await tx.wait();
+    return { success: true, hash: tx.hash, receipt };
+}
+
+export async function getCompanyProfile(signerOrProvider, address) {
+    const contract = getContract(signerOrProvider);
+    const profile = await contract.getCompanyProfile(address);
+    return {
+        name: profile.name,
+        registrationId: profile.registrationId,
+        contactEmail: profile.contactEmail,
+        ipfsHash: profile.ipfsHash,
+        isRegistered: profile.isRegistered,
+        reputationTotal: Number(profile.reputationTotal),
+        ratingCount: Number(profile.ratingCount)
+    };
 }
 
 export async function submitBid(signer, tenderId, commitmentHash) {
@@ -112,3 +143,11 @@ export async function getWinner(signerOrProvider, tenderId) {
     };
 }
 
+export async function getBidDetails(signerOrProvider, tenderId, address) {
+    const contract = getContract(signerOrProvider);
+    const details = await contract.getBidDetails(tenderId, address);
+    return {
+        revealed: details[0],
+        amount: Number(details[1])
+    };
+}

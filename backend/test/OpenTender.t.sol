@@ -20,6 +20,13 @@ contract OpenTenderTest is Test {
         // Give our users some fake ether (optional, but good practice)
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);
+
+        // Register companies (needed for BIDDER_ROLE)
+        vm.prank(alice);
+        tenderContract.registerCompany("Alice Corp", "REG-A", "alice@example.com", "QmAlice");
+
+        vm.prank(bob);
+        tenderContract.registerCompany("Bob Corp", "REG-B", "bob@example.com", "QmBob");
     }
 
     // --- Helper to generate hash matching the contract's logic ---
@@ -34,6 +41,7 @@ contract OpenTenderTest is Test {
         uint256 tenderId = tenderContract.createTender(
             "Road Project",
             "Build a road",
+            OpenTender.Category.Construction,
             "QmHash123",
             1 days, // Bidding lasts 1 day
             1 days, // Reveal lasts 1 day after that
@@ -104,7 +112,7 @@ contract OpenTenderTest is Test {
     function test_RevertIf_RevealWithWrongSecret() public {
         // Setup tender
         vm.prank(admin);
-        uint256 id = tenderContract.createTender("Job", "Desc", "Qm", 100, 100, 10);
+        uint256 id = tenderContract.createTender("Job", "Desc", OpenTender.Category.IT, "Qm", 100, 100, 10);
 
         // Alice commits to 500 with secret "pass123"
         vm.prank(alice);
@@ -126,7 +134,7 @@ contract OpenTenderTest is Test {
     function test_RevertIf_ChangeAmountDuringReveal() public {
         // Setup tender
         vm.prank(admin);
-        uint256 id = tenderContract.createTender("Job", "Desc", "Qm", 100, 100, 10);
+        uint256 id = tenderContract.createTender("Job", "Desc", OpenTender.Category.IT, "Qm", 100, 100, 10);
 
         // Alice commits to 500
         vm.prank(alice);

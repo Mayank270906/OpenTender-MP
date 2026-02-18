@@ -1,10 +1,21 @@
+
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchTender, submitBid, revealBid, closeTender, cancelTender, getWinner } from '../hooks/useContract';
+import {
+    fetchTender,
+    submitBid,
+    revealBid,
+    closeTender,
+    cancelTender,
+    getWinner,
+    getCompanyProfile,
+    rateBidder
+} from '../hooks/useContract';
 import { generateSecretKey, generateCommitment } from '../utils/crypto';
 import { getTimeLeft, formatTimestamp, getStatusLabel, getStatusColor } from '../utils/time';
 import { showToast } from '../components/Toast';
 import { useWallet } from '../context/WalletContext';
+import { CATEGORIES } from '../utils/categories';
 
 export default function TenderDetail() {
     const { id } = useParams();
@@ -13,22 +24,27 @@ export default function TenderDetail() {
 
     const [tender, setTender] = useState(null);
     const [winner, setWinner] = useState(null);
+    const [creatorProfile, setCreatorProfile] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [now, setNow] = useState(Date.now());
+    const [actionLoading, setActionLoading] = useState(false);
 
-    // Bid submission
+    // Bid Form
     const [bidAmount, setBidAmount] = useState('');
     const [generatedKey, setGeneratedKey] = useState(null);
-    const [bidSubmitted, setBidSubmitted] = useState(false);
-    const [bidLoading, setBidLoading] = useState(false);
 
-    // Bid reveal
+    // Reveal Form
     const [revealAmount, setRevealAmount] = useState('');
     const [revealKey, setRevealKey] = useState('');
+
+    // Rating Form
+    const [rating, setRating] = useState(5);
+
+    const [now, setNow] = useState(Date.now());
+    const [bidSubmitted, setBidSubmitted] = useState(false);
+    const [bidLoading, setBidLoading] = useState(false);
     const [revealLoading, setRevealLoading] = useState(false);
 
-    // Close/Cancel
-    const [actionLoading, setActionLoading] = useState(false);
+
 
     useEffect(() => {
         const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -50,6 +66,13 @@ export default function TenderDetail() {
             if (data.status === 3) {
                 const w = await getWinner(provider, Number(id));
                 if (w.selectedAt > 0) setWinner(w);
+            }
+
+            try {
+                const p = await getCompanyProfile(provider, data.creator);
+                if (p && p.name) setCreatorProfile(p);
+            } catch (e) {
+                console.warn("Could not fetch creator profile", e);
             }
         } catch (err) {
             console.error('Failed to load tender:', err);
@@ -144,6 +167,20 @@ export default function TenderDetail() {
         }
     }
 
+    async function handleRate() {
+        if (!winner) return;
+        try {
+            setActionLoading(true);
+            await rateBidder(signer, tender.id, rating);
+            showToast('Rating submitted successfully!');
+        } catch (err) {
+            console.error('Rating failed:', err);
+            showToast(err.reason || err.message || 'Rating failed', 'error');
+        } finally {
+            setActionLoading(false);
+        }
+    }
+
     if (loading) {
         return (
             <div className="page">
@@ -175,13 +212,26 @@ export default function TenderDetail() {
             {/* Tender Info */}
             <div className="tender-header">
                 <div className="tender-title-row">
-                    <h1 className="page-title">#{tender.id} — {tender.title}</h1>
+                    <span className="text-sm px-2 py-1 bg-gray-100 rounded text-gray-600">{CATEGORIES[tender.category] || 'General'}</span>
+                    <h1 className="page-title">{tender.title}</h1>
                     <span
                         className="status-badge status-badge-lg"
-                        style={{ backgroundColor: getStatusColor(tender.status) + '20', color: getStatusColor(tender.status) }}
+                        style={{
+                            backgroundColor: getStatusColor(tender.status) + '20',
+                            color: getStatusColor(tender.status)
+                        }}
                     >
                         {getStatusLabel(tender.status)}
                     </span>
+                </div>
+                <div className="text-gray-500 mb-4 flex items-center gap-2">
+                    <span>Created by:</span>
+                    {creatorProfile ? (
+                        <span className="font-semibold text-primary">{creatorProfile.name}</span>
+                    ) : (
+                        <span className="mono text-sm">{tender.creator}</span>
+                    )}
+                    <span className="text-xs text-gray-400">• {new Date(tender.createdAt * 1000).toLocaleDateString()}</span>
                 </div>
                 <p className="tender-description">{tender.description}</p>
             </div>
@@ -222,14 +272,39 @@ export default function TenderDetail() {
                 <div className="card winner-card">
                     <h2 className="card-title">🏆 Winner</h2>
                     <div className="winner-info">
-                        <div>
-                            <span className="detail-label">Address</span>
+                        <div className="key-row">
+                            <span className="font-semibold">Winning Bidder:</span>
                             <span className="mono">{winner.bidder}</span>
                         </div>
-                        <div>
-                            <span className="detail-label">Winning Bid</span>
-                            <span className="mono">{winner.amount} wei</span>
+                        <div className="key-row">
+                            <span className="font-semibold">Amount:</span>
+                            <span className="mono font-bold">{winner.amount} wei</span>
                         </div>
+
+                        {isCreator && (
+                            <div className="mt-4 pt-4 border-t border-yellow-200">
+                                <h4 className="font-bold text-sm mb-2">Rate Performance</h4>
+                                <div className="flex gap-2 items-center">
+                                    {[1, 2, 3, 4, 5].map(star => (
+                                        <button
+                                            key={star}
+                                            type="button"
+                                            onClick={() => setRating(star)}
+                                            className={`text - 2xl ${star <= rating ? 'text-yellow-500' : 'text-gray-300'} `}
+                                        >
+                                            ★
+                                        </button>
+                                    ))}
+                                    <button
+                                        className="btn btn-sm btn-primary ml-2"
+                                        onClick={handleRate}
+                                        disabled={actionLoading}
+                                    >
+                                        Submit Rating
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

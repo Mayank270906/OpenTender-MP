@@ -17,6 +17,12 @@ export default function Navbar() {
                 <Link to="/create" className="btn btn-nav">
                     <span>+</span> Create Tender
                 </Link>
+                <Link to="/profile" className="btn btn-nav">
+                    <span>👤</span> Profile
+                </Link>
+                <Link to="/dashboard" className="btn btn-nav">
+                    <span>📊</span> Dashboard
+                </Link>
                 <div className="wallet-actions">
                     <div className="wallet-badge">
                         <span className="wallet-dot"></span>

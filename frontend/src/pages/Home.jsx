@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchAllTenders } from '../hooks/useContract';
 import { getTimeLeft, getStatusLabel, getStatusColor } from '../utils/time';
 import { useWallet } from '../context/WalletContext';
+import { CATEGORIES, CATEGORY_OPTIONS } from '../utils/categories';
 
 export default function Home() {
     const navigate = useNavigate();
@@ -11,6 +12,7 @@ export default function Home() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [search, setSearch] = useState('');
+    const [filterCategory, setFilterCategory] = useState(null);
     const [now, setNow] = useState(Date.now());
 
     useEffect(() => {
@@ -37,9 +39,11 @@ export default function Home() {
         }
     }
 
-    const filtered = tenders.filter(t =>
-        t.title.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = tenders.filter(t => {
+        const matchSearch = t.title.toLowerCase().includes(search.toLowerCase());
+        const matchCategory = filterCategory === null || t.category === filterCategory;
+        return matchSearch && matchCategory;
+    });
 
     return (
         <div className="page">
@@ -53,15 +57,31 @@ export default function Home() {
                 </button>
             </div>
 
-            <div className="search-wrap">
-                <span className="search-icon">🔍</span>
-                <input
-                    type="text"
-                    placeholder="Search tenders..."
-                    className="search-input"
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                />
+            <div className="flex gap-4 mb-6">
+                <div className="search-wrap flex-1">
+                    <span className="search-icon">🔍</span>
+                    <input
+                        type="text"
+                        placeholder="Search tenders..."
+                        className="search-input"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                    />
+                </div>
+
+                <div className="w-1/4 min-w-[200px]">
+                    <select
+                        className="form-input"
+                        value={filterCategory ?? ''}
+                        onChange={e => setFilterCategory(e.target.value === '' ? null : Number(e.target.value))}
+                        style={{ height: '100%' }}
+                    >
+                        <option value="">All Categories</option>
+                        {CATEGORY_OPTIONS.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
             {loading && (
@@ -96,6 +116,7 @@ export default function Home() {
                             <tr>
                                 <th>ID</th>
                                 <th>Title</th>
+                                <th>Category</th>
                                 <th>Min Bid</th>
                                 <th>Status</th>
                                 <th>Bid Deadline</th>
@@ -109,6 +130,7 @@ export default function Home() {
                                 <tr key={t.id}>
                                     <td className="mono">#{t.id}</td>
                                     <td className="bold">{t.title}</td>
+                                    <td><span className="text-sm px-2 py-1 bg-gray-100 rounded">{CATEGORIES[t.category]}</span></td>
                                     <td className="mono">{t.minBid} wei</td>
                                     <td>
                                         <span

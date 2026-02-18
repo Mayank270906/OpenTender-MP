@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createTender } from '../hooks/useContract';
 import { showToast } from '../components/Toast';
 import { useWallet } from '../context/WalletContext';
+import { CATEGORY_OPTIONS } from '../utils/categories';
 
 export default function CreateTender() {
     const navigate = useNavigate();
@@ -10,6 +11,7 @@ export default function CreateTender() {
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+    const [category, setCategory] = useState(CATEGORY_OPTIONS[0].value);
     const [ipfsHash, setIpfsHash] = useState('');
     const [minBid, setMinBid] = useState('');
     const [biddingDeadline, setBiddingDeadline] = useState('');
@@ -46,6 +48,7 @@ export default function CreateTender() {
                 signer,
                 title,
                 description,
+                category,
                 ipfsHash || '',
                 biddingDurationSec,
                 revealDurationSec,
@@ -91,6 +94,19 @@ export default function CreateTender() {
                         onChange={e => setDescription(e.target.value)}
                         rows={4}
                     />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Category</label>
+                    <select
+                        className="form-input"
+                        value={category}
+                        onChange={e => setCategory(Number(e.target.value))}
+                    >
+                        {CATEGORY_OPTIONS.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </select>
                 </div>
 
                 <div className="form-group">
