@@ -44,8 +44,6 @@ export default function TenderDetail() {
     const [bidLoading, setBidLoading] = useState(false);
     const [revealLoading, setRevealLoading] = useState(false);
 
-
-
     useEffect(() => {
         const timer = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(timer);
@@ -197,7 +195,7 @@ export default function TenderDetail() {
             <div className="page">
                 <div className="error-state">
                     <p>Tender not found</p>
-                    <button className="btn btn-primary" onClick={() => navigate('/')}>Back to Home</button>
+                    <button className="btn btn-primary" onClick={() => navigate('/')} style={{ marginTop: '12px' }}>Back to Home</button>
                 </div>
             </div>
         );
@@ -212,7 +210,7 @@ export default function TenderDetail() {
             {/* Tender Info */}
             <div className="tender-header">
                 <div className="tender-title-row">
-                    <span className="text-sm px-2 py-1 bg-gray-100 rounded text-gray-600">{CATEGORIES[tender.category] || 'General'}</span>
+                    <span className="category-badge">{CATEGORIES[tender.category] || 'General'}</span>
                     <h1 className="page-title">{tender.title}</h1>
                     <span
                         className="status-badge status-badge-lg"
@@ -224,14 +222,14 @@ export default function TenderDetail() {
                         {getStatusLabel(tender.status)}
                     </span>
                 </div>
-                <div className="text-gray-500 mb-4 flex items-center gap-2">
+                <div className="tender-meta">
                     <span>Created by:</span>
                     {creatorProfile ? (
-                        <span className="font-semibold text-primary">{creatorProfile.name}</span>
+                        <span className="creator-name">{creatorProfile.name}</span>
                     ) : (
-                        <span className="mono text-sm">{tender.creator}</span>
+                        <span className="mono" style={{ fontSize: '0.85rem' }}>{tender.creator}</span>
                     )}
-                    <span className="text-xs text-gray-400">• {new Date(tender.createdAt * 1000).toLocaleDateString()}</span>
+                    <span className="date-sep">• {new Date(tender.createdAt * 1000).toLocaleDateString()}</span>
                 </div>
                 <p className="tender-description">{tender.description}</p>
             </div>
@@ -272,31 +270,33 @@ export default function TenderDetail() {
                 <div className="card winner-card">
                     <h2 className="card-title">🏆 Winner</h2>
                     <div className="winner-info">
-                        <div className="key-row">
-                            <span className="font-semibold">Winning Bidder:</span>
+                        <div className="winner-row">
+                            <span className="winner-row-label">Winning Bidder:</span>
                             <span className="mono">{winner.bidder}</span>
                         </div>
-                        <div className="key-row">
-                            <span className="font-semibold">Amount:</span>
-                            <span className="mono font-bold">{winner.amount} wei</span>
+                        <div className="winner-row">
+                            <span className="winner-row-label">Amount:</span>
+                            <span className="mono bold">{winner.amount} wei</span>
                         </div>
 
                         {isCreator && (
-                            <div className="mt-4 pt-4 border-t border-yellow-200">
-                                <h4 className="font-bold text-sm mb-2">Rate Performance</h4>
-                                <div className="flex gap-2 items-center">
-                                    {[1, 2, 3, 4, 5].map(star => (
-                                        <button
-                                            key={star}
-                                            type="button"
-                                            onClick={() => setRating(star)}
-                                            className={`text - 2xl ${star <= rating ? 'text-yellow-500' : 'text-gray-300'} `}
-                                        >
-                                            ★
-                                        </button>
-                                    ))}
+                            <div className="rate-section">
+                                <h4 className="rate-section-title">Rate Performance</h4>
+                                <div className="rate-row">
+                                    <div className="star-rating">
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                            <button
+                                                key={star}
+                                                type="button"
+                                                onClick={() => setRating(star)}
+                                                className={`star-btn ${star <= rating ? 'active' : 'inactive'}`}
+                                            >
+                                                ★
+                                            </button>
+                                        ))}
+                                    </div>
                                     <button
-                                        className="btn btn-sm btn-primary ml-2"
+                                        className="btn btn-sm btn-primary"
                                         onClick={handleRate}
                                         disabled={actionLoading}
                                     >
@@ -324,10 +324,11 @@ export default function TenderDetail() {
                             value={bidAmount}
                             onChange={e => setBidAmount(e.target.value)}
                             min="1"
+                            id="bid-amount-input"
                         />
                     </div>
 
-                    <button className="btn btn-primary" onClick={handleSubmitBid} disabled={bidLoading}>
+                    <button className="btn btn-primary" onClick={handleSubmitBid} disabled={bidLoading} id="submit-bid-btn">
                         {bidLoading ? <><span className="spinner-sm"></span> Submitting...</> : '🔐 Encrypt & Submit Bid'}
                     </button>
 
@@ -359,6 +360,7 @@ export default function TenderDetail() {
                             placeholder="The amount you originally bid"
                             value={revealAmount}
                             onChange={e => setRevealAmount(e.target.value)}
+                            id="reveal-amount-input"
                         />
                     </div>
 
@@ -370,10 +372,11 @@ export default function TenderDetail() {
                             placeholder="Paste your secret key"
                             value={revealKey}
                             onChange={e => setRevealKey(e.target.value)}
+                            id="reveal-key-input"
                         />
                     </div>
 
-                    <button className="btn btn-primary" onClick={handleReveal} disabled={revealLoading}>
+                    <button className="btn btn-primary" onClick={handleReveal} disabled={revealLoading} id="reveal-bid-btn">
                         {revealLoading ? <><span className="spinner-sm"></span> Revealing...</> : '🔓 Reveal Bid'}
                     </button>
                 </div>
@@ -385,12 +388,12 @@ export default function TenderDetail() {
                     <h2 className="card-title">⚡ Actions</h2>
                     <div className="action-row">
                         {canClose && (
-                            <button className="btn btn-primary" onClick={handleClose} disabled={actionLoading}>
+                            <button className="btn btn-primary" onClick={handleClose} disabled={actionLoading} id="finalize-tender-btn">
                                 {actionLoading ? <><span className="spinner-sm"></span> Processing...</> : '✅ Finalize Tender'}
                             </button>
                         )}
                         {tender.status === 0 && isCreator && (
-                            <button className="btn btn-danger" onClick={handleCancel} disabled={actionLoading}>
+                            <button className="btn btn-danger" onClick={handleCancel} disabled={actionLoading} id="cancel-tender-btn">
                                 {actionLoading ? 'Processing...' : '🚫 Cancel Tender'}
                             </button>
                         )}

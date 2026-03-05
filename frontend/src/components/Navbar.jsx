@@ -1,10 +1,19 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useWallet } from '../context/WalletContext';
 
 export default function Navbar() {
     const { account, disconnectWallet } = useWallet();
-    const address = account;
-    const short = address ? `${address.slice(0, 6)}…${address.slice(-4)}` : '';
+    const location = useLocation();
+    const [menuOpen, setMenuOpen] = useState(false);
+
+    const short = account ? `${account.slice(0, 6)}…${account.slice(-4)}` : '';
+
+    const navLinks = [
+        { to: '/create', icon: '+', label: 'Create Tender' },
+        { to: '/profile', icon: '👤', label: 'Profile' },
+        { to: '/dashboard', icon: '📊', label: 'Dashboard' },
+    ];
 
     return (
         <nav className="navbar">
@@ -13,16 +22,25 @@ export default function Navbar() {
                 OpenTender
             </Link>
 
-            <div className="navbar-actions">
-                <Link to="/create" className="btn btn-nav">
-                    <span>+</span> Create Tender
-                </Link>
-                <Link to="/profile" className="btn btn-nav">
-                    <span>👤</span> Profile
-                </Link>
-                <Link to="/dashboard" className="btn btn-nav">
-                    <span>📊</span> Dashboard
-                </Link>
+            <button
+                className="mobile-menu-btn"
+                onClick={() => setMenuOpen(!menuOpen)}
+                aria-label="Toggle menu"
+            >
+                {menuOpen ? '✕' : '☰'}
+            </button>
+
+            <div className={`navbar-actions${menuOpen ? ' open' : ''}`}>
+                {navLinks.map(link => (
+                    <Link
+                        key={link.to}
+                        to={link.to}
+                        className={`btn btn-nav${location.pathname === link.to ? ' active' : ''}`}
+                        onClick={() => setMenuOpen(false)}
+                    >
+                        <span>{link.icon}</span> {link.label}
+                    </Link>
+                ))}
                 <div className="wallet-actions">
                     <div className="wallet-badge">
                         <span className="wallet-dot"></span>

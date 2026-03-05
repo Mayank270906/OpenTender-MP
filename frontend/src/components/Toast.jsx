@@ -21,10 +21,20 @@ export default function Toast() {
 
     if (!toast.visible) return null;
 
+    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+
     return (
         <div className={`toast toast-${toast.type}`}>
-            <span className="toast-icon">{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}</span>
+            <span className="toast-icon">{icons[toast.type] || 'ℹ️'}</span>
             <span>{toast.message}</span>
+            <button
+                className="toast-close"
+                onClick={() => setToast(prev => ({ ...prev, visible: false }))}
+                aria-label="Close"
+            >
+                ✕
+            </button>
+            <div className="toast-progress"></div>
         </div>
     );
 }

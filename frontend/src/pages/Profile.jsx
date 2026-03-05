@@ -56,8 +56,19 @@ export default function Profile() {
     }
 
     if (loading) {
-        return <div className="page"><div className="loading-state"><div className="spinner"></div></div></div>;
+        return (
+            <div className="page">
+                <div className="loading-state">
+                    <div className="spinner"></div>
+                    <p>Loading profile...</p>
+                </div>
+            </div>
+        );
     }
+
+    const reputationScore = (profile && profile.reputationTotal > 0 && profile.ratingCount > 0)
+        ? (profile.reputationTotal / profile.ratingCount).toFixed(1)
+        : '0.0';
 
     return (
         <div className="page">
@@ -70,21 +81,17 @@ export default function Profile() {
 
             {profile ? (
                 <div className="card">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-2xl font-bold">{profile.name}</h2>
-                        <span className="status-badge" style={{ backgroundColor: '#DCFCE7', color: '#16A34A' }}>Verified Company</span>
+                    <div className="profile-header">
+                        <h2 className="profile-name">{profile.name}</h2>
+                        <span className="verified-badge">✓ Verified Company</span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="profile-grid">
                         <div className="detail-card">
                             <span className="detail-label">Reputation Score</span>
-                            <div className="flex items-end gap-2">
-                                <span className="text-3xl font-bold text-yellow-500">
-                                    {(profile.reputationTotal > 0 && profile.ratingCount > 0)
-                                        ? (profile.reputationTotal / profile.ratingCount).toFixed(1)
-                                        : '0.0'}
-                                </span>
-                                <span className="text-sm text-gray-500 mb-1">/ 5.0 ({profile.ratingCount} ratings)</span>
+                            <div>
+                                <span className="reputation-value">{reputationScore}</span>
+                                <div className="reputation-meta">/ 5.0 ({profile.ratingCount} ratings)</div>
                             </div>
                         </div>
 
@@ -100,7 +107,7 @@ export default function Profile() {
 
                         <div className="detail-card">
                             <span className="detail-label">Wallet Address</span>
-                            <span className="detail-value mono text-sm">{account}</span>
+                            <span className="detail-value mono" style={{ fontSize: '0.85rem' }}>{account}</span>
                         </div>
                     </div>
                 </div>
@@ -118,6 +125,7 @@ export default function Profile() {
                                 value={name}
                                 onChange={e => setName(e.target.value)}
                                 placeholder="Acme Corp"
+                                id="company-name-input"
                             />
                         </div>
 
@@ -156,8 +164,12 @@ export default function Profile() {
                         </div>
 
                         <div className="form-actions">
-                            <button type="submit" className="btn btn-primary" disabled={registering}>
-                                {registering ? 'Registering...' : 'Register Company'}
+                            <button type="submit" className="btn btn-primary" disabled={registering} id="register-company-btn">
+                                {registering ? (
+                                    <><span className="spinner-sm"></span> Registering...</>
+                                ) : (
+                                    'Register Company'
+                                )}
                             </button>
                         </div>
                     </form>

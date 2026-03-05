@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import Toast from './components/Toast';
 import Home from './pages/Home';
 import CreateTender from './pages/CreateTender';
@@ -12,7 +13,14 @@ import ConnectWallet from './components/ConnectWallet';
 function AppContent() {
   const { account, isConnecting } = useWallet();
 
-  if (isConnecting) return <div className="flex h-screen items-center justify-center text-white">Loading...</div>;
+  if (isConnecting) {
+    return (
+      <div className="loading-screen">
+        <div className="spinner"></div>
+        <p>Connecting to wallet...</p>
+      </div>
+    );
+  }
 
   if (!account) {
     return <ConnectWallet />;
@@ -31,6 +39,7 @@ function AppContent() {
             <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </main>
+        <Footer />
         <Toast />
       </div>
     </BrowserRouter>

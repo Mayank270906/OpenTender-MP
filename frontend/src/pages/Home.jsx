@@ -52,13 +52,13 @@ export default function Home() {
                     <h1 className="page-title">Active Tenders</h1>
                     <p className="page-subtitle">Browse and participate in blockchain-secured tenders</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => navigate('/create')}>
+                <button className="btn btn-primary" onClick={() => navigate('/create')} id="create-tender-btn">
                     <span>+</span> Create Tender
                 </button>
             </div>
 
-            <div className="flex gap-4 mb-6">
-                <div className="search-wrap flex-1">
+            <div className="search-filter-row">
+                <div className="search-wrap">
                     <span className="search-icon">🔍</span>
                     <input
                         type="text"
@@ -66,15 +66,16 @@ export default function Home() {
                         className="search-input"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
+                        id="search-tenders-input"
                     />
                 </div>
 
-                <div className="w-1/4 min-w-[200px]">
+                <div className="filter-select-wrap">
                     <select
                         className="form-input"
                         value={filterCategory ?? ''}
                         onChange={e => setFilterCategory(e.target.value === '' ? null : Number(e.target.value))}
-                        style={{ height: '100%' }}
+                        id="filter-category-select"
                     >
                         <option value="">All Categories</option>
                         {CATEGORY_OPTIONS.map(opt => (
@@ -94,7 +95,7 @@ export default function Home() {
             {error && (
                 <div className="error-state">
                     <p>⚠️ {error}</p>
-                    <button className="btn btn-secondary" onClick={loadTenders}>Retry</button>
+                    <button className="btn btn-secondary" onClick={loadTenders} style={{ marginTop: '12px' }}>Retry</button>
                 </div>
             )}
 
@@ -130,7 +131,7 @@ export default function Home() {
                                 <tr key={t.id}>
                                     <td className="mono">#{t.id}</td>
                                     <td className="bold">{t.title}</td>
-                                    <td><span className="text-sm px-2 py-1 bg-gray-100 rounded">{CATEGORIES[t.category]}</span></td>
+                                    <td><span className="category-badge">{CATEGORIES[t.category]}</span></td>
                                     <td className="mono">{t.minBid} wei</td>
                                     <td>
                                         <span

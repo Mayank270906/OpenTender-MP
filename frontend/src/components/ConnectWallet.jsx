@@ -4,16 +4,44 @@ export default function ConnectWallet() {
     const { connectWallet } = useWallet();
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white">
-            <div className="p-8 bg-gray-800 rounded-lg shadow-lg text-center">
-                <h1 className="text-3xl font-bold mb-4">Welcome to OpenTender</h1>
-                <p className="mb-6 text-gray-300">Please connect your wallet to continue.</p>
-                <button
-                    onClick={connectWallet}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-md font-semibold transition duration-200"
-                >
-                    Connect Wallet
+        <div className="connect-page">
+            <div className="connect-card">
+                <div className="connect-logo">◆</div>
+                <h1 className="connect-title">
+                    Welcome to <span className="connect-title-accent">OpenTender</span>
+                </h1>
+                <p className="connect-subtitle">
+                    Decentralized blind tendering powered by blockchain.
+                    Submit encrypted bids, ensure fair competition, and build trust — all on-chain.
+                </p>
+
+                <button onClick={connectWallet} className="connect-btn" id="connect-wallet-btn">
+                    <span>🔗</span> Connect Wallet
                 </button>
+
+                <div className="connect-features">
+                    <div className="feature-card">
+                        <span className="feature-icon">🔒</span>
+                        <div className="feature-title">Blind Bidding</div>
+                        <div className="feature-desc">
+                            Encrypted bids keep amounts hidden until the reveal phase
+                        </div>
+                    </div>
+                    <div className="feature-card">
+                        <span className="feature-icon">⛓️</span>
+                        <div className="feature-title">On-Chain Security</div>
+                        <div className="feature-desc">
+                            Every action is recorded immutably on the blockchain
+                        </div>
+                    </div>
+                    <div className="feature-card">
+                        <span className="feature-icon">⭐</span>
+                        <div className="feature-title">Reputation System</div>
+                        <div className="feature-desc">
+                            Build your company profile and earn trust over time
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
